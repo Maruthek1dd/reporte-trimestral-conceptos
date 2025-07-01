@@ -17,7 +17,7 @@ meses_orden = {
     "diciembre": 12
 }
 
-carpeta = os.path.join(os.path.dirname(__file__), "data")
+carpeta = "data"
 dfs = []
 
 for archivo in os.listdir(carpeta):
