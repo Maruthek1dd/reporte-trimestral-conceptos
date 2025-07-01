@@ -82,7 +82,7 @@ df_general["IMPORTE"] = (
     .abs()
 )
 
-ruta = r"C:\Users\Usuario\Desktop\reporte\data\sexo"
+ruta = "data/sexo"
 
 # Leer el archivo sin header, separador tab (ajustar sep si es otro)
 df_sexo = pd.read_csv(ruta, sep="\t", header=None, encoding="latin1")
