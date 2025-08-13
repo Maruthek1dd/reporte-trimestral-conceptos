@@ -32,7 +32,7 @@ df_general = pd.concat(dfs, ignore_index=True)
 df_general = df_general.sort_values("orden_mes").reset_index(drop=True)
 
 # Primero filtramos los conceptos relevantes para no trabajar con datos innecesarios
-conceptos_validos = [1,80,8,9,17,104,313,314,315,316,317,341,342,194,196,198,301,19,29,47,31,88,153,15]
+conceptos_validos = [1,80,8,9,17,104,313,314,315,316,317,341,342,194,196,198,301,19,29,47,31,88,153,15, 36,259,253]
 df_general = df_general[df_general['CONCEPTO'].isin(conceptos_validos)].copy()
 
 # Función para clasificar tipo_empleado
