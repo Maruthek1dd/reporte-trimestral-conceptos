@@ -1,7 +1,9 @@
 import streamlit as st
 import pandas as pd
 from script.cleaner import df_general as df
-from script.func import grafico_por_concepto
+from script.func import grafico_por_concepto, grafico_distribucion
+import datetime
+
 
 
 
@@ -74,71 +76,119 @@ st.markdown("""
 
 st.sidebar.image("https://www.villamaria.gob.ar/static/images/logo.92f64765ca39.svg", width=200)
 
-st.sidebar.header("Filtros")
+# Fecha y hora actual
+now = datetime.datetime.now()
+st.sidebar.markdown(f"**Fecha:** {now.strftime('%d/%m/%Y')}")
+st.sidebar.markdown(f"**Hora:** {now.strftime('%H:%M:%S')}")
 
-# Conceptos (obligatorio)
-conceptos_disponibles = df["CONCEPTO_DESC"].unique()
-concepto_seleccionado = st.sidebar.selectbox("Seleccionar concepto", conceptos_disponibles)
+# Elementos interactivos extra
 
-# Secretaría
-secretarias_disponibles = df["SECRETARIA_DESC"].dropna().unique()
-secretaria_filtrada = st.sidebar.multiselect("Filtrar por Secretaría", secretarias_disponibles, default=secretarias_disponibles)
+modo_visualizacion = st.sidebar.selectbox("Modo de Visualización", ["Concepto", "Distribución por Categoría"])
+if st.sidebar.button("🔄 Reiniciar filtros"):
+    st.rerun()
 
-# Tipo de empleado
-tipos_disponibles = df["tipo_empleado"].dropna().unique()
-tipo_empleado_filtrado = st.sidebar.multiselect("Filtrar por Tipo de Empleado", tipos_disponibles, default=tipos_disponibles)
+# ----------------------------------------------------------
+# BLOQUE: CONCEPTO
+# ----------------------------------------------------------
+if modo_visualizacion == "Concepto":
+    df = df[~df['CONCEPTO'].isin([1, 80])]
+    st.header("🔍 Análisis por Concepto")
 
-# Mes
-meses_disponibles = df["mes"].dropna().unique()
-mes_filtrado = st.sidebar.multiselect("Filtrar por Mes", meses_disponibles, default=meses_disponibles)
+    conceptos_disponibles = df["CONCEPTO_DESC"].unique()
+    concepto_seleccionado = st.selectbox("Seleccionar concepto", conceptos_disponibles)
 
-# Sexo
-sexos_disponibles = df["genero"].dropna().unique()
-sexo_filtrado = st.sidebar.multiselect("Filtrar por Sexo", sexos_disponibles, default=sexos_disponibles)
+    # Filtros específicos del modo Concepto
+    secretarias_disponibles = df["SECRETARIA_DESC"].dropna().unique()
+    secretaria_filtrada = st.multiselect("Filtrar por Secretaría", secretarias_disponibles, default=secretarias_disponibles)
 
-# --- Aplicar filtros ---
-df_filtrado = df[
-    (df["CONCEPTO_DESC"] == concepto_seleccionado) &
-    (df["SECRETARIA_DESC"].isin(secretaria_filtrada)) &
-    (df["tipo_empleado"].isin(tipo_empleado_filtrado)) &
-    (df["mes"].isin(mes_filtrado)) &
-    (df["genero"].isin(sexo_filtrado))
-]
+    tipos_disponibles = df["tipo_empleado"].dropna().unique()
+    tipo_empleado_filtrado = st.multiselect("Filtrar por Tipo de Empleado", tipos_disponibles, default=tipos_disponibles)
 
+    meses_disponibles = df["mes"].dropna().unique()
+    mes_filtrado = st.multiselect("Filtrar por Mes", meses_disponibles, default=meses_disponibles)
 
+    sexos_disponibles = df["genero"].dropna().unique()
+    sexo_filtrado = st.multiselect("Filtrar por Sexo", sexos_disponibles, default=sexos_disponibles)
 
-st.write(f"**{concepto_seleccionado}**")
-st.dataframe(df_filtrado)
+    df_filtrado = df[
+        (df["CONCEPTO_DESC"] == concepto_seleccionado) &
+        (df["SECRETARIA_DESC"].isin(secretaria_filtrada)) &
+        (df["tipo_empleado"].isin(tipo_empleado_filtrado)) &
+        (df["mes"].isin(mes_filtrado)) &
+        (df["genero"].isin(sexo_filtrado))
+    ]
 
-def convertir_a_csv(df):
-    return df.to_csv(index=False).encode('utf-8')
+    st.write(f"**{concepto_seleccionado}**")
+    st.dataframe(df_filtrado)
+    csv = df_filtrado.to_csv(index=False).encode('utf-8')
 
-csv = convertir_a_csv(df_filtrado)
-st.download_button(
-    label="📥 Descargar CSV",
-    data=csv,
-    file_name='datos_filtrados.csv',
-    mime='text/csv',
+    st.download_button(
+        label="📥 Descargar CSV",
+        data=csv,
+        file_name='datos_filtrados.csv',
+        mime='text/csv',
 )
 
-st.sidebar.markdown("### Agrupar por")
-opciones_agrupacion = {
-    "Secretaría": "SECRETARIA_DESC",
-    "Tipo de Empleado": "tipo_empleado",
-    "Mes": "mes",
-    "genero": "genero"
-}
-agrupado_por_opciones = st.sidebar.multiselect("Agrupar por", list(opciones_agrupacion.keys()), default=["Secretaría"])
-columnas_agrupadas = [opciones_agrupacion[key] for key in agrupado_por_opciones]
+    st.subheader("Agrupar por")
+    opciones_agrupacion = {
+        "Secretaría": "SECRETARIA_DESC",
+        "Tipo de Empleado": "tipo_empleado",
+        "Mes": "mes",
+        "genero": "genero"
+    }
+    agrupado_por_opciones = st.multiselect("Agrupar por", list(opciones_agrupacion.keys()), default=["Secretaría"])
+    columnas_agrupadas = [opciones_agrupacion[key] for key in agrupado_por_opciones]
 
-# --- Mostrar gráfico ---
-fig = grafico_por_concepto(df, concepto_seleccionado, columnas_agrupadas)
+    fig = grafico_por_concepto(df, concepto_seleccionado, columnas_agrupadas)
 
-# st.subheader(f"Gráfico: {concepto_seleccionado} por {agrupado_por}")
-if fig:
-    st.plotly_chart(fig)
-else:
-    st.warning("No hay datos para este concepto.")
+    if fig:
+        st.plotly_chart(fig)
+    else:
+        st.warning("No hay datos para este concepto.")
+
+
+# ----------------------------------------------------------
+# BLOQUE: DISTRIBUCIÓN POR CATEGORÍA
+# ----------------------------------------------------------
+elif modo_visualizacion == "Distribución por Categoría":
+    st.header("📊 Distribución por Categoría")
+
+
+    opciones_categorias = {
+        "Género": "genero",
+        "Título": "titulo",
+        "Tipo de Empleado": "tipo_empleado",
+        "Secretaría": "SECRETARIA_DESC"
+    }
+
+    # Selectbox con keys amigables
+    col_distrib_key = st.selectbox(
+        "Seleccionar columna para distribución",
+        list(opciones_categorias.keys())
+    )
+    col_distrib = opciones_categorias[col_distrib_key]
+
+    mes_distribucion = st.selectbox("Seleccionar mes", df["mes"].dropna().unique())
+
+    mostrar_porcentaje = st.checkbox("Mostrar como porcentaje", value=False)
+    orientacion_horizontal = st.checkbox("Gráfico horizontal", value=False)
+
+    if col_distrib and mes_distribucion:
+        df_distrib = df[df["CONCEPTO"].isin([1, 80])]
+        fig_distrib = grafico_distribucion(
+            df_distrib,
+            columna=col_distrib,
+            mes=mes_distribucion,
+            porcentaje=mostrar_porcentaje,
+            orientation="h" if orientacion_horizontal else "v"
+        )
+
+        if fig_distrib:
+            st.plotly_chart(fig_distrib)
+        else:
+            st.warning("No hay datos para esta columna.")
+
+
 
 
 st.markdown("<hr>", unsafe_allow_html=True)

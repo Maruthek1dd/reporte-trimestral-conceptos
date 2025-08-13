@@ -51,3 +51,62 @@ def grafico_por_concepto(df, concepto, agrupado_por, color_por=None):
     )
 
     return fig
+
+
+# ─────────────────────────────────────────────────────────────
+# BLOQUE: Filtros y selección de estructura
+# ─────────────────────────────────────────────────────────────
+
+
+import plotly.express as px
+
+def grafico_distribucion(df, columna,mes,porcentaje=False, color=None, orientation="v"):
+    """
+    Genera un gráfico de barras con la distribución de valores en una columna.
+    
+    - columna: string, nombre de la columna a analizar
+    - porcentaje: bool, si True, se muestran porcentajes en lugar de cantidades
+    - color: otra columna para colorear barras (por ejemplo, "genero")
+    - orientation: "v" para barras verticales, "h" para horizontales
+    """
+    if df.empty or columna not in df.columns or "LEGAJO" not in df.columns:
+        return None
+
+    df_mes = df[df['mes']== mes]
+    df_unicos = df_mes.drop_duplicates(subset="LEGAJO")
+    
+    conteo = df_unicos[columna].value_counts(dropna=False).reset_index()
+    conteo.columns = [columna, "Cantidad"]
+
+    if porcentaje:
+        total = conteo["Cantidad"].sum()
+        conteo["Porcentaje"] = (conteo["Cantidad"] / total * 100).round(2)
+        y_value = "Porcentaje"
+        y_format = ".2f%"
+        title = f"Distribución porcentual de '{columna}'"
+    else:
+        y_value = "Cantidad"
+        y_format = ",d"
+        title = f"Distribución de '{columna}'"
+
+    fig = px.bar(
+        conteo,
+        x=columna if orientation == "v" else y_value,
+        y=y_value if orientation == "v" else columna,
+        text=y_value,
+        orientation=orientation,
+        title=title,
+        color=color if color in df.columns else None,
+        height=600
+    )
+
+    fig.update_layout(
+        xaxis_title=columna if orientation == "v" else y_value,
+        yaxis_title=y_value if orientation == "v" else columna,
+        yaxis_tickformat=y_format if orientation == "v" else None,
+        xaxis_tickformat=y_format if orientation == "h" else None,
+        xaxis_tickangle=0,
+        margin=dict(t=60, b=100)
+    )
+
+    return fig
